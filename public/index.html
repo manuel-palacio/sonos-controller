@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sonos</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="header">
+    <span class="logo">◈ Sonos</span>
+    <span class="room-count" id="room-count"></span>
+  </header>
+  <main class="dashboard">
+    <div class="col-left">
+      <section class="card">
+        <div class="card-label">Now Playing · <span id="now-playing-room"></span></div>
+        <div class="art-wrap">
+          <img id="album-art" src="" alt="Album art">
+          <div id="art-placeholder" class="art-placeholder"></div>
+        </div>
+        <div class="track-title" id="track-title">—</div>
+        <div class="track-sub"   id="track-sub">—</div>
+        <div class="seek-bar-wrap">
+          <span class="time" id="time-pos">0:00</span>
+          <input type="range" id="seek-bar" class="seek-bar" min="0" max="100" value="0">
+          <span class="time" id="time-dur">0:00</span>
+        </div>
+        <div class="controls">
+          <button class="ctrl-btn"          id="btn-prev">⏮</button>
+          <button class="ctrl-btn ctrl-play" id="btn-play">▶</button>
+          <button class="ctrl-btn"          id="btn-next">⏭</button>
+        </div>
+      </section>
+      <section class="card">
+        <div class="card-label">Queue</div>
+        <ul class="queue-list" id="queue-list"></ul>
+        <button class="clear-btn" id="btn-clear-queue">Clear queue</button>
+      </section>
+    </div>
+    <div class="col-right">
+      <section class="card">
+        <div class="card-label">Rooms</div>
+        <ul class="rooms-list" id="rooms-list"></ul>
+      </section>
+      <section class="card">
+        <div class="card-label">Grouping</div>
+        <ul class="grouping-list" id="grouping-list"></ul>
+      </section>
+    </div>
+  </main>
+  <div class="toast" id="toast"></div>
+  <script src="app.js"></script>
+</body>
+</html>
