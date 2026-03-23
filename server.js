@@ -1,4 +1,5 @@
 const express = require('express');
+const http = require('http');
 const path = require('path');
 const sonos = require('./lib/sonos');
 const { startDiscovery } = require('./lib/discovery');
@@ -71,6 +72,43 @@ app.post('/api/rooms/:id/group', async (req, res) => {
 
 app.get('/api/rooms/:id/queue',    async (req, res) => { const d = getCoordinator(req,res); if(!d) return; await wrap(res, async () => res.json(await sonos.getQueue(d.ip))); });
 app.delete('/api/rooms/:id/queue', async (req, res) => { const d = getCoordinator(req,res); if(!d) return; await wrap(res, async () => { await sonos.clearQueue(d.ip); res.json({ok:true}); }); });
+
+// Playlists (Sonos saved queues)
+app.get('/api/playlists', async (req, res) => {
+  const device = store.getRooms().find((r) => r.isCoordinator && r.online);
+  if (!device) return res.status(503).json({ error: 'No online coordinator' });
+  const d = store.getDeviceByRincon(device.id);
+  await wrap(res, async () => {
+    const playlists = await sonos.getSavedQueues(d.ip);
+    // Rewrite relative art URIs through our proxy
+    playlists.forEach((p) => {
+      if (p.artUri && p.artUri.startsWith('/'))
+        p.artUri = `/api/art?url=${encodeURIComponent(`http://${d.ip}:1400${p.artUri}`)}`;
+    });
+    res.json(playlists);
+  });
+});
+
+app.post('/api/rooms/:id/playlist', async (req, res) => {
+  const d = getCoordinator(req, res); if (!d) return;
+  const { sqId, resUri, title } = req.body;
+  if (!sqId || !/^SQ:\d+$/.test(sqId)) return res.status(400).json({ error: 'invalid sqId' });
+  if (!resUri) return res.status(400).json({ error: 'resUri required' });
+  await wrap(res, async () => { await sonos.playPlaylist(d.ip, d.id, sqId, resUri, title || ''); res.json({ ok: true }); });
+});
+
+// Album art proxy — fetches from Sonos device server-side to avoid browser 404s
+app.get('/api/art', (req, res) => {
+  const url = req.query.url;
+  if (!url || !/^http:\/\/[\d.]+:1400\//.test(url)) return res.status(400).end();
+  http.get(url, (sonosRes) => {
+    console.log(`Art proxy ${url} → ${sonosRes.statusCode}`);
+    if (sonosRes.statusCode !== 200) { sonosRes.resume(); return res.status(sonosRes.statusCode).end(); }
+    res.set('Content-Type', sonosRes.headers['content-type'] || 'image/jpeg');
+    res.set('Cache-Control', 'public, max-age=60');
+    sonosRes.pipe(res);
+  }).on('error', (e) => { console.error('Art proxy error:', e.message); res.status(502).end(); });
+});
 
 // Startup
 if (require.main === module) {

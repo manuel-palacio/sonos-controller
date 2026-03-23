@@ -31,9 +31,7 @@ function hmsToSec(hms) {
 }
 function secToHms(sec) {
   const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = Math.floor(sec % 60);
-  return h > 0
-    ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
-    : `${m}:${String(s).padStart(2,'0')}`;
+  return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
 }
 
 function showToast(msg) {
@@ -231,6 +229,43 @@ function attachControls() {
   });
 }
 
+// ── Render: Playlists ──────────────────────────────────────────────────
+async function renderPlaylists() {
+  const list = $('playlist-list');
+  try {
+    const playlists = await api('GET', '/api/playlists');
+    list.replaceChildren();
+    if (!playlists.length) {
+      const empty = mk('li', { text: 'No saved queues', cls: 'playlist-empty' });
+      list.appendChild(empty);
+      return;
+    }
+    playlists.forEach((pl) => {
+      const art = mk('div', { cls: 'pl-art' });
+      if (pl.artUri) {
+        const img = mk('img'); img.src = pl.artUri;
+        img.onerror = () => img.remove();
+        art.appendChild(img);
+      }
+      const title = mk('span', { cls: 'pl-title', text: pl.title });
+      const li = mk('li', { cls: 'playlist-item', data: { id: pl.id, title: pl.title, resUri: pl.resUri } });
+      li.append(art, title);
+      list.appendChild(li);
+    });
+
+    list.querySelectorAll('.playlist-item').forEach((li) => {
+      li.addEventListener('click', async () => {
+        const room = getActiveRoom(); if (!room) return;
+        const id = room.isCoordinator ? room.id : room.groupCoordinatorId;
+        try {
+          await api('POST', `/api/rooms/${id}/playlist`, { sqId: li.dataset.id, resUri: li.dataset.resUri, title: li.dataset.title });
+          showToast(`Playing ${li.dataset.title}`);
+        } catch (err) { showToast(err.message); }
+      });
+    });
+  } catch { /* silently ignore if no coordinator yet */ }
+}
+
 // ── SSE ────────────────────────────────────────────────────────────────
 function connectSSE() {
   const es = new EventSource('/events');
@@ -248,4 +283,5 @@ function connectSSE() {
 attachControls();
 connectSSE();
 setTimeout(renderQueue, 800);
+setTimeout(renderPlaylists, 1000);
 setInterval(renderQueue, 10_000);
