@@ -34,7 +34,7 @@ function getCoordinator(req, res) {
   return store.getDeviceByRincon(req.params.id);
 }
 async function wrap(res, fn) {
-  try { await fn(); } catch (e) { console.error(e.message); res.status(502).json({ error: e.message }); }
+  try { await fn(); } catch (e) { console.error(e.message); if (!res.headersSent) res.status(502).json({ error: e.message }); }
 }
 
 // Routes
@@ -46,7 +46,9 @@ app.post('/api/rooms/:id/prev',  async (req, res) => { const d = getDevice(req,r
 
 app.post('/api/rooms/:id/seek', async (req, res) => {
   const d = getDevice(req,res); if(!d) return;
-  if (req.body.position == null) return res.status(400).json({ error: 'position required' });
+  const positionRe = /^\d+:\d{2}:\d{2}$/;
+  if (!req.body.position || !positionRe.test(req.body.position))
+    return res.status(400).json({ error: 'position must be H:MM:SS or HH:MM:SS' });
   await wrap(res, async () => { await sonos.seek(d.ip, req.body.position); res.json({ok:true}); });
 });
 
