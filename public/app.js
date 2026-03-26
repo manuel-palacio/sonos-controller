@@ -221,7 +221,7 @@ function attachControls() {
     catch (err) { showToast(err.message); }
   });
 
-  $('btn-clear-queue').addEventListener('click', async () => {
+    $('btn-clear-queue').addEventListener('click', async () => {
     const r = getActiveRoom(); if (!r) return;
     const id = r.isCoordinator ? r.id : r.groupCoordinatorId;
     try { await api('DELETE', `/api/rooms/${id}/queue`); renderQueue(); }
